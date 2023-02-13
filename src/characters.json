@@ -1,0 +1,22 @@
+{
+    "Characters": [
+        {
+            "Name": "Mr. Default",
+            "HP": "35",
+            "AC": "12",
+            "Initiative": "13"
+        },
+        {
+            "Name": "Captain Peanuts",
+            "HP": "47",
+            "AC": "16",
+            "Initiative": "7"
+        },
+        {
+            "Name": "Jesus Christ",
+            "HP": "70",
+            "AC": "11",
+            "Initiative": "24"
+        }
+    ]
+}

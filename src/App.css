@@ -1,0 +1,14 @@
+.character {
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 0 20px;
+  background-color: #eee;
+}
+
+.character-wrapper {
+  background: #eee;
+  display: "flex";
+  flex-direction: "column";
+  align-items: "flex-start";
+  gap: 8px;
+}
