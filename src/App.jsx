@@ -14,14 +14,15 @@ function Character({ name, hp, ac, initiative }) {
 }
 
 function CharacterWrapper({ characters }) {
-  const charArray = characters.map((character) => {
+  const charArray = characters.map((character, index) => (
     <Character
-      name={character["Name"]}
-      hp={character["HP"]}
-      ac={character["AC"]}
-      initiative={character["Initiative"]}
+      key={`chracter-${index}`}
+      name={character.Name}
+      hp={character.HP}
+      ac={character.AC}
+      initiative={character.Initiative}
     />
-  });
+  ));
 
   return (
     <div className="character-wrapper">
@@ -32,7 +33,6 @@ function CharacterWrapper({ characters }) {
 }
 
 function App() {
-
   return (
     <>
       <h1>Characters</h1>
