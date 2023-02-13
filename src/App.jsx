@@ -41,8 +41,4 @@ function App() {
   );
 }
 
-/*
-characters.slice(index-2, index+2)
-*/
-
 export default App;
