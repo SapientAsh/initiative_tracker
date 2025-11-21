@@ -1,0 +1,27 @@
+[
+	{
+		"name" : "Samuel",
+		"ac" : 16,
+		"hp" : 55
+	},
+	{
+		"name" : "Thomas",
+		"ac" : 16,
+		"hp" : 78
+	},
+    {
+        "name" : "Samantha",
+        "ac" : 17,
+        "hp" : 68
+    },
+	{
+		"name" : "Kristoff",
+		"ac" : 15,
+		"hp" : 70
+	},
+	{
+		"name" : "Daneesh",
+		"ac" : 17,
+		"hp" : 87
+	}
+]
