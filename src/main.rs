@@ -1,0 +1,518 @@
+use serde::{Serialize, Deserialize};
+use std::{fmt,io::{self,Write}};
+use std::fs;
+
+#[derive(Serialize, Deserialize)]
+struct JSONCharacter {
+    name : String,
+    ac   : u8,
+    hp   : u16
+}
+
+struct Character {
+    name    : String,
+    ac      : u8,
+    current : u16,
+    max     : u16,
+    score   : u8,
+    temp    : u16
+}
+
+impl Character {
+    fn new(name: String, ac: u8, max: u16, score: u8) -> Self {
+        Character {
+            name    : name,
+            ac      : ac,
+            current : max,
+            max     : max,
+            score   : score,
+            temp    : 0
+        }
+    }
+
+    fn damage(&mut self, mut amount: u16) {
+        if self.temp > 0 {
+            if self.temp > amount {
+                self.temp -= amount;
+                return;
+            }
+        }
+        amount -= self.temp;
+        self.temp = 0;
+
+        if self.current < amount {
+            self.current = 0;
+            return;
+        }
+
+        self.current -= amount;
+    }
+
+    fn heal(&mut self, amount: u16) {
+        self.current += amount;
+        if self.current > self.max { self.current = self.max }
+    }
+}
+
+impl fmt::Display for Character {
+    fn fmt(&self, f: &mut fmt::Formatter<>) -> fmt::Result {
+        let hp_length = match self.temp > 0 {
+            true => self.current.to_string().len() + self.max.to_string().len() + self.temp.to_string().len() + 8,
+            false => self.current.to_string().len() + self.max.to_string().len() + 5
+        };
+        let max_width = std::cmp::max(15, self.name.len() + 2);
+        let max_width = std::cmp::max(max_width, hp_length + 1);
+        let buffer = (max_width + self.name.len() % 2) % 2;
+
+        let display_string = match self.temp > 0 {
+            true => format!("┌{}┐ \n\
+            │{}{}{}│ \n\
+            │ HP {}/{} + {}{}│ \n\
+            │ AC {}{}│ \n\
+            │ Init {}{}│ \n\
+            └{}┘ \n\n",
+            "─".repeat(max_width),
+            " ".repeat((max_width - self.name.len()) / 2),
+            self.name,
+            " ".repeat((max_width - self.name.len()) / 2 + buffer),
+            self.current,
+            self.max,
+            self.temp,
+            " ".repeat(max_width - hp_length),
+            self.ac,
+            " ".repeat(max_width - 4 - self.ac.to_string().len()),
+            self.score,
+            " ".repeat(max_width - 6 - self.score.to_string().len()),
+            "─".repeat(max_width)
+            ),
+            false => format!("┌{}┐ \n\
+            │{}{}{}│ \n\
+            │ HP {}/{}{}│ \n\
+            │ AC {}{}│ \n\
+            │ Init {}{}│ \n\
+            └{}┘ \n\n",
+            "─".repeat(max_width),
+            " ".repeat((max_width - self.name.len()) / 2),
+            self.name,
+            " ".repeat((max_width - self.name.len()) / 2 + buffer),
+            self.current,
+            self.max,
+            " ".repeat(max_width - hp_length),
+            self.ac,
+            " ".repeat(max_width - 4 - self.ac.to_string().len()),
+            self.score,
+            " ".repeat(max_width - 6 - self.score.to_string().len()),
+            "─".repeat(max_width))
+        };
+
+        write!(f, "{display_string}")
+    }
+}
+
+struct Node {
+    data: Character,
+    next: Option<*mut Node>
+}
+
+impl Node {
+    fn new(data: Character) -> Self {
+        Node {
+            data : data,
+            next : None
+        }
+    }
+}
+
+struct Initiative {
+    head: Option<*mut Node>,
+    current: Option<*mut Node>
+}
+
+impl Initiative {
+    fn new() -> Self {
+        Initiative { 
+            head: None, 
+            current: None 
+        }
+    }
+
+    fn add(&mut self, char: Character) {
+        unsafe{
+            if self.head.is_none() {
+                self.head = Some(Box::into_raw(Box::new(Node::new(char))));
+                self.current = self.head;
+                return;
+            }
+
+            if (*self.head.unwrap()).data.score < char.score {
+                let mut temp = Node::new(char);
+                temp.next = self.head;
+                self.head = Some(Box::into_raw(Box::new(temp)));
+                return;
+            }
+
+            if(*self.head.unwrap()).next.is_none() {
+                let temp = Node::new(char);
+                (*self.head.unwrap()).next = Some(Box::into_raw(Box::new(temp)));
+                return;
+            }
+
+            let mut current = self.head;
+            while (*current.unwrap()).next.is_some() && (*(*current.unwrap()).next.unwrap()).data.score > char.score {
+                current = (*current.unwrap()).next;
+            }
+
+            if (*current.unwrap()).next.is_none() {
+                (*current.unwrap()).next = Some(Box::into_raw(Box::new(Node::new(char))));
+                return;
+            }
+
+            let mut temp = Node::new(char);
+            temp.next = (*current.unwrap()).next;
+            (*current.unwrap()).next = Some(Box::into_raw(Box::new(temp)));
+        }
+    }
+
+    fn display(&self) {
+        if self.current.is_none() {
+            print!("Initiative order is empty");
+            return;
+        }
+        unsafe {
+            print!("{}", (*self.current.unwrap()).data);
+        }
+    }
+
+    fn show(&self, name: String) {
+        let target = self.find(name);
+        if target.is_some() {
+            unsafe {
+                print!("{}", (*target.unwrap()).data);
+            }
+        }
+    }
+
+    fn advance(&mut self) {
+        unsafe {
+            if self.current.is_none() || (*self.current.unwrap()).next.is_none() {
+                self.current = self.head;
+                return;
+            }
+            self.current = (*self.current.unwrap()).next;
+        }
+    }
+
+    fn find(&self, name: String) -> Option<*mut Node> {
+        if self.head.is_none() {
+            return None;
+        }
+
+        let mut current = self.head;
+
+        while current.is_some() {
+            unsafe {
+                if (*current.unwrap()).data.name == name {
+                    return current;
+                }
+                current = (*current.unwrap()).next;
+            }
+        }
+
+        return None;
+    }
+
+    fn remove(&mut self, name: String) {
+        if self.head.is_none() {
+            println!("Initiative order is empty");
+            return;
+        }
+
+        unsafe {
+            if (*self.head.unwrap()).data.name == name {
+                let next_node = (*self.head.unwrap()).next;
+                if self.current.unwrap() == self.head.unwrap() {
+                    self.current = next_node;
+                }
+                self.head = next_node;
+                return;
+            }
+
+            let mut current = self.head;
+            while(*current.unwrap()).next.is_some() {
+                if (*(*current.unwrap()).next.unwrap()).data.name == name {
+                    (*current.unwrap()).next = (*(*current.unwrap()).next.unwrap()).next;
+                    return;
+                }
+                current = (*current.unwrap()).next;
+            }
+        }
+    }
+
+    fn temp(&self, name: String, amount: u16) {
+        let target = self.find(name);
+        if target.is_some() {
+            unsafe {
+                (*target.unwrap()).data.temp = amount;
+            }
+        }
+    }
+
+    fn damage(&self, name: String, amount: u16) {
+        let target = self.find(name);
+        if target.is_some() {
+            unsafe {
+                (*target.unwrap()).data.damage(amount);
+            }
+        }
+    }
+
+    fn heal(&self, name: String, amount: u16) {
+        let target = self.find(name);
+        if target.is_some() {
+            unsafe {
+                (*target.unwrap()).data.heal(amount);
+            }
+        }
+    }
+
+    fn import(&mut self, path: &str) -> Result<(), &'static str> {
+        let f: String =  match fs::read_to_string(path) {
+            Ok(v) => v,
+            Err(_) => return Err("Provided path is not valid")
+        };
+
+        let json_chars: Vec<JSONCharacter> = match serde_json::from_str(&f){
+            Ok(v) => v,
+            Err(_) => return Err("The provided file is not JSON or is not in the expected format.")
+        };
+
+        println!("Enter initiative scores:");
+        json_chars.iter().for_each( | x | {
+            let mut score = prompt(format!("{}: ", x.name).as_str()).parse::<u8>();
+
+            while score.is_err() {
+                score = prompt("Enter a number between 0-255: ").parse::<u8>();
+            }
+
+            self.add(
+                Character {
+                    name    : x.name.clone(),
+                    ac      : x.ac,
+                    current : x.hp,
+                    max     : x.hp,
+                    score   : score.unwrap(),
+                    temp    : 0
+                }
+            );
+        });
+
+        Ok(())
+    }
+
+    fn export(&self, path: &str) -> Result<(), &'static str> {
+        if self.head.is_none() {
+            return Err("Initiative order is empty");
+        }
+
+        let mut chars = Vec::<JSONCharacter>::new();
+        let mut current = self.head;
+
+        unsafe {
+            while current.is_some() {
+                let char: &Character = &(*current.unwrap()).data;
+                let json_char = JSONCharacter{
+                    name : char.name.clone(),
+                    ac   : char.ac,
+                    hp   : char.max
+                };
+                chars.push(json_char);
+                current = (*current.unwrap()).next;
+            }
+        }
+
+        let json = serde_json::to_string(&chars).unwrap();
+        let mut f: fs::File = match fs::File::create_new(path) {
+            Ok(f) => f,
+            Err(_) => return Err("Path is invalid or file already exists")
+        };
+
+        if f.write_all(json.as_bytes()).is_err() {
+            return Err("Could not save to file");
+        }
+
+        Ok(())
+    }
+
+    fn beginning(&mut self) {
+        if self.head.is_some() {
+            self.current = self.head;
+        }
+    }
+}
+
+impl fmt::Display for Initiative {
+    fn fmt(&self, f: &mut fmt::Formatter<>) -> fmt::Result {
+        if self.head.is_none() {
+            return write!(f, "Initiative order is empty \n");
+        }
+
+        let mut current = self.head;
+        while current.is_some() {
+            unsafe {
+                write!(f, "{}", (*current.unwrap()).data).unwrap();
+                current = (*current.unwrap()).next;
+            }
+        }
+        return Ok(())
+    }
+}
+
+fn prompt(prompt: &str) -> String {
+    let input = &mut String::new();
+
+    input.clear();
+    print!("{prompt}");
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(input).unwrap();
+
+    input.trim().to_string()
+}
+
+fn main() {
+    println!("┌──────────────────────────────────┐");
+    println!("│                                  │");
+    println!("│ SapientAsh's Initiative Tracker! │");
+    println!("│                                  │");
+    println!("└──────────────────────────────────┘");
+    let mut init = Initiative::new();
+
+    loop {
+        let input = prompt("> ");
+        let input = input.trim();
+        println!();
+
+        if input == "help" {
+            println!("Available commands: \n\
+            import: Add characters to initiative order from a compatible JSON file \n\
+            export: Save initiative order to JSON file that can be imported \n\
+            add: Add character to initiative order manually \n\
+            next: Advance initiative order to the next turn \n\
+            exit: Close this program \n\
+            display: Print the full initiative order to the console \n\
+            current: Print the current turn to the console \n\
+            show: Print a specific character to the console \n\
+            damage: Deal damage to a specified character \n\
+            heal: Heal a specified character \n\
+            temp: Grant temporary HP to a specified character \n\
+            remove: Remove a specified character from the initiative order \n\
+            top: Set the current turn to the first in initiative order (useful after adding initial characters) \
+            ")
+        }
+
+        else if input == "import" {
+            let path: String = prompt("Enter path to JSON: ");
+
+            let result: Result<(), &'static str> = init.import(path.as_str());
+            if result.is_err() {
+                println!("{}", result.unwrap_err());
+            }
+        }
+
+        else if input == "export" {
+            let path = prompt("Enter target path for JSON file: ");
+
+            let result: Result <(), &'static str> = init.export(path.as_str());
+            if result.is_err() {
+                println!("{}", result.unwrap_err());
+            }
+        }
+
+        else if input == "add" {
+            let name = prompt("Name: ");
+            let mut ac = prompt("AC: ").trim().parse::<u8>();
+            while ac.is_err() {
+                ac = prompt("Enter a number between 0-255: ").parse::<u8>();
+            }
+            let mut max = prompt("HP: ").trim().parse::<u16>();
+            while max.is_err() {
+                max = prompt("Enter a number between 0-65535: ").parse::<u16>();
+            }
+            let mut score = prompt("Score: ").trim().parse::<u8>();
+            while score.is_err() {
+                score = prompt("Enter a number between 0-255: ").parse::<u8>();
+            }
+
+            println!();
+
+            init.add(Character::new(name, ac.unwrap(), max.unwrap(), score.unwrap()));
+            //init.display();
+        }
+
+        else if input == "next" {
+            init.advance();
+            init.display();
+        }
+
+        else if input == "exit" {
+            return;
+        }
+
+        else if input == "display" {
+            print!("{init}");
+        }
+
+        else if input == "current" {
+            init.display();
+        }
+
+        else if input == "show" {
+            let name = prompt("Name: ");
+            println!();
+            init.show(name);
+        }
+
+        else if input == "damage" {
+            let name = prompt("Name: ");
+            let mut amount = prompt("Amount: ").parse::<u16>();
+            while amount.is_err() {
+                amount = prompt("Enter a number between 0-65535: ").parse::<u16>();
+            }
+            init.damage(name, amount.unwrap());
+        }
+        
+        else if input == "heal" {
+            let name = prompt("Name: ");
+            let mut amount = prompt("Amount: ").parse::<u16>();
+            while amount.is_err() {
+                amount = prompt("Enter a number between 0-65535: ").parse::<u16>();
+            }
+            init.heal(name, amount.unwrap());
+        }
+
+        else if input == "temp" {
+            let name = prompt("Name: ");
+            let mut amount = prompt("Amount: ").parse::<u16>();
+            while amount.is_err() {
+                amount = prompt("Enter a number between 0-65535: ").parse::<u16>();
+            }
+            init.temp(name, amount.unwrap());
+        }
+
+        else if input == "remove" {
+           let name = prompt("Name: ");
+            init.remove(name);
+        }
+
+        else if input == "top" {
+            init.beginning();
+           init.display();
+        }
+
+        else {
+            println!("Sorry, I didn't understand that.");
+        }
+
+        println!();
+    }
+}
+
