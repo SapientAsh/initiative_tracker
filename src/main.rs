@@ -392,7 +392,7 @@ fn main() {
         println!();
 
         match input {
-            "help" => {
+            "help"    => {
                 println!("Available commands: \n\
                 import: Add characters to initiative order from a compatible JSON file \n\
                 export: Save initiative order to JSON file that can be imported \n\
@@ -408,24 +408,24 @@ fn main() {
                 remove: Remove a specified character from the initiative order \n\
                 top: Set the current turn to the first in initiative order (useful after adding initial characters) \
                 ")
-            },
-            "import" => {
+            }
+            "import"  => {
                 let path: String = prompt("Enter path to JSON: ");
 
                 let result: Result<(), &'static str> = init.import(path.as_str());
                 if result.is_err() {
                     println!("{}", result.unwrap_err());
                 }
-            },
-            "export" => {
+            }
+            "export"  => {
                 let path = prompt("Enter target path for JSON file: ");
 
                 let result: Result <(), &'static str> = init.export(path.as_str());
                 if result.is_err() {
                     println!("{}", result.unwrap_err());
                 }
-            },
-            "add" => {
+            }
+            "add"     => {
                 let name = prompt("Name: ");
                 let mut ac = prompt("AC: ").trim().parse::<u8>();
                 while ac.is_err() {
@@ -443,42 +443,42 @@ fn main() {
                 println!();
 
                 init.add(Character::new(name, ac.unwrap(), max.unwrap(), score.unwrap()));
-            },
-            "next" => {
+            }
+            "next"    => {
                 init.advance();
                 init.display();
-            },
-            "exit" => {
+            }
+            "exit"    => {
                 return;
-            },
+            }
             "display" => {
                 print!("{init}");
-            },
+            }
             "current" => {
                 init.display();
-            },
-            "show" => {
+            }
+            "show"    => {
                 let name = prompt("Name: ");
                 println!();
                 init.show(name);
-            },
-            "damage" => {
+            }
+            "damage"  => {
                 let name = prompt("Name: ");
                 let mut amount = prompt("Amount: ").parse::<u16>();
                 while amount.is_err() {
                     amount = prompt("Enter a number between 0-65535: ").parse::<u16>();
                 }
                 init.damage(name, amount.unwrap());
-            },
-            "heal" => {
+            }
+            "heal"    => {
                 let name = prompt("Name: ");
                 let mut amount = prompt("Amount: ").parse::<u16>();
                 while amount.is_err() {
                     amount = prompt("Enter a number between 0-65535: ").parse::<u16>();
                 }
                 init.heal(name, amount.unwrap());
-            },
-            "temp" => {
+            }
+            "temp"    => {
                 let name = prompt("Name: ");
                 let mut amount = prompt("Amount: ").parse::<u16>();
                 while amount.is_err() {
@@ -486,15 +486,15 @@ fn main() {
                 }
                 init.temp(name, amount.unwrap());
             }
-            "remove" => {
+            "remove"  => {
                 let name = prompt("Name: ");
                 init.remove(name);
             }
-            "top" => {
+            "top"     => {
                 init.beginning();
                 init.display();
-            },
-            _ => {
+            }
+            _         => {
                 println!("Sorry, I didn't understand that.");
             }
         };
