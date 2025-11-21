@@ -1,0 +1,22 @@
+[
+	{
+		"name" : "Diana",
+		"ac" : 15,
+		"hp" : 11
+	},
+	{
+		"name" : "Hecate",
+		"ac" : 16,
+		"hp" : 12
+	},
+	{
+		"name" : "Fortune's Tide",
+		"ac" : 14,
+		"hp" : 8
+	},
+	{
+		"name" : "Gotri",
+		"ac" : 16,
+		"hp" : 11
+	}
+]
