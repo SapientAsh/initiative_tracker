@@ -391,127 +391,113 @@ fn main() {
         let input = input.trim();
         println!();
 
-        if input == "help" {
-            println!("Available commands: \n\
-            import: Add characters to initiative order from a compatible JSON file \n\
-            export: Save initiative order to JSON file that can be imported \n\
-            add: Add character to initiative order manually \n\
-            next: Advance initiative order to the next turn \n\
-            exit: Close this program \n\
-            display: Print the full initiative order to the console \n\
-            current: Print the current turn to the console \n\
-            show: Print a specific character to the console \n\
-            damage: Deal damage to a specified character \n\
-            heal: Heal a specified character \n\
-            temp: Grant temporary HP to a specified character \n\
-            remove: Remove a specified character from the initiative order \n\
-            top: Set the current turn to the first in initiative order (useful after adding initial characters) \
-            ")
-        }
+        match input {
+            "help" => {
+                println!("Available commands: \n\
+                import: Add characters to initiative order from a compatible JSON file \n\
+                export: Save initiative order to JSON file that can be imported \n\
+                add: Add character to initiative order manually \n\
+                next: Advance initiative order to the next turn \n\
+                exit: Close this program \n\
+                display: Print the full initiative order to the console \n\
+                current: Print the current turn to the console \n\
+                show: Print a specific character to the console \n\
+                damage: Deal damage to a specified character \n\
+                heal: Heal a specified character \n\
+                temp: Grant temporary HP to a specified character \n\
+                remove: Remove a specified character from the initiative order \n\
+                top: Set the current turn to the first in initiative order (useful after adding initial characters) \
+                ")
+            },
+            "import" => {
+                let path: String = prompt("Enter path to JSON: ");
 
-        else if input == "import" {
-            let path: String = prompt("Enter path to JSON: ");
+                let result: Result<(), &'static str> = init.import(path.as_str());
+                if result.is_err() {
+                    println!("{}", result.unwrap_err());
+                }
+            },
+            "export" => {
+                let path = prompt("Enter target path for JSON file: ");
 
-            let result: Result<(), &'static str> = init.import(path.as_str());
-            if result.is_err() {
-                println!("{}", result.unwrap_err());
+                let result: Result <(), &'static str> = init.export(path.as_str());
+                if result.is_err() {
+                    println!("{}", result.unwrap_err());
+                }
+            },
+            "add" => {
+                let name = prompt("Name: ");
+                let mut ac = prompt("AC: ").trim().parse::<u8>();
+                while ac.is_err() {
+                    ac = prompt("Enter a number between 0-255: ").parse::<u8>();
+                }
+                let mut max = prompt("HP: ").trim().parse::<u16>();
+                while max.is_err() {
+                    max = prompt("Enter a number between 0-65535: ").parse::<u16>();
+                }
+                let mut score = prompt("Score: ").trim().parse::<u8>();
+                while score.is_err() {
+                    score = prompt("Enter a number between 0-255: ").parse::<u8>();
+                }
+
+                println!();
+
+                init.add(Character::new(name, ac.unwrap(), max.unwrap(), score.unwrap()));
+            },
+            "next" => {
+                init.advance();
+                init.display();
+            },
+            "exit" => {
+                return;
+            },
+            "display" => {
+                print!("{init}");
+            },
+            "current" => {
+                init.display();
+            },
+            "show" => {
+                let name = prompt("Name: ");
+                println!();
+                init.show(name);
+            },
+            "damage" => {
+                let name = prompt("Name: ");
+                let mut amount = prompt("Amount: ").parse::<u16>();
+                while amount.is_err() {
+                    amount = prompt("Enter a number between 0-65535: ").parse::<u16>();
+                }
+                init.damage(name, amount.unwrap());
+            },
+            "heal" => {
+                let name = prompt("Name: ");
+                let mut amount = prompt("Amount: ").parse::<u16>();
+                while amount.is_err() {
+                    amount = prompt("Enter a number between 0-65535: ").parse::<u16>();
+                }
+                init.heal(name, amount.unwrap());
+            },
+            "temp" => {
+                let name = prompt("Name: ");
+                let mut amount = prompt("Amount: ").parse::<u16>();
+                while amount.is_err() {
+                    amount = prompt("Enter a number between 0-65535: ").parse::<u16>();
+                }
+                init.temp(name, amount.unwrap());
             }
-        }
-
-        else if input == "export" {
-            let path = prompt("Enter target path for JSON file: ");
-
-            let result: Result <(), &'static str> = init.export(path.as_str());
-            if result.is_err() {
-                println!("{}", result.unwrap_err());
+            "remove" => {
+                let name = prompt("Name: ");
+                init.remove(name);
             }
-        }
-
-        else if input == "add" {
-            let name = prompt("Name: ");
-            let mut ac = prompt("AC: ").trim().parse::<u8>();
-            while ac.is_err() {
-                ac = prompt("Enter a number between 0-255: ").parse::<u8>();
+            "top" => {
+                init.beginning();
+                init.display();
+            },
+            _ => {
+                println!("Sorry, I didn't understand that.");
             }
-            let mut max = prompt("HP: ").trim().parse::<u16>();
-            while max.is_err() {
-                max = prompt("Enter a number between 0-65535: ").parse::<u16>();
-            }
-            let mut score = prompt("Score: ").trim().parse::<u8>();
-            while score.is_err() {
-                score = prompt("Enter a number between 0-255: ").parse::<u8>();
-            }
-
-            println!();
-
-            init.add(Character::new(name, ac.unwrap(), max.unwrap(), score.unwrap()));
-            //init.display();
-        }
-
-        else if input == "next" {
-            init.advance();
-            init.display();
-        }
-
-        else if input == "exit" {
-            return;
-        }
-
-        else if input == "display" {
-            print!("{init}");
-        }
-
-        else if input == "current" {
-            init.display();
-        }
-
-        else if input == "show" {
-            let name = prompt("Name: ");
-            println!();
-            init.show(name);
-        }
-
-        else if input == "damage" {
-            let name = prompt("Name: ");
-            let mut amount = prompt("Amount: ").parse::<u16>();
-            while amount.is_err() {
-                amount = prompt("Enter a number between 0-65535: ").parse::<u16>();
-            }
-            init.damage(name, amount.unwrap());
-        }
-        
-        else if input == "heal" {
-            let name = prompt("Name: ");
-            let mut amount = prompt("Amount: ").parse::<u16>();
-            while amount.is_err() {
-                amount = prompt("Enter a number between 0-65535: ").parse::<u16>();
-            }
-            init.heal(name, amount.unwrap());
-        }
-
-        else if input == "temp" {
-            let name = prompt("Name: ");
-            let mut amount = prompt("Amount: ").parse::<u16>();
-            while amount.is_err() {
-                amount = prompt("Enter a number between 0-65535: ").parse::<u16>();
-            }
-            init.temp(name, amount.unwrap());
-        }
-
-        else if input == "remove" {
-           let name = prompt("Name: ");
-            init.remove(name);
-        }
-
-        else if input == "top" {
-            init.beginning();
-           init.display();
-        }
-
-        else {
-            println!("Sorry, I didn't understand that.");
-        }
-
+        };
         println!();
     }
 }
