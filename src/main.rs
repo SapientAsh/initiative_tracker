@@ -362,7 +362,7 @@ impl Initiative {
             }
         }
 
-        let json = serde_json::to_string(&chars).unwrap();
+        let json = serde_json::to_string_pretty(&chars).unwrap();
         let mut f: fs::File = match fs::File::create_new(path) {
             Ok(f) => f,
             Err(_) => return Err("Path is invalid or file already exists"),
