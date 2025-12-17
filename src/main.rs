@@ -12,6 +12,8 @@ struct JSONCharacter {
     hp: u16,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(from = "JSONCharacter")]
 struct Character {
     name: String,
     ac: u8,
@@ -19,6 +21,16 @@ struct Character {
     max: u16,
     score: u8,
     temp: u16,
+}
+
+impl From<Character> for JSONCharacter {
+    fn from(value: Character) -> Self {
+        JSONCharacter { 
+            name: value.name,
+            ac: value.ac, 
+            hp: value.max 
+        }
+    }
 }
 
 impl Character {
@@ -119,6 +131,25 @@ impl fmt::Display for Character {
         };
 
         write!(f, "{display_string}")
+    }
+}
+
+impl From<JSONCharacter> for Character {
+    fn from(value: JSONCharacter) -> Self {
+        let mut score = prompt(format!("{}: ", value.name).as_str()).parse::<u8>();
+
+        while score.is_err() {
+            score = prompt("Enter a number between 0-255: ").parse::<u8>();
+        }
+
+        Character {
+            name: value.name,
+            ac: value.ac,
+            current: value.hp,
+            max: value.hp,
+            score: score.unwrap(),
+            temp: 0
+        }
     }
 }
 
@@ -296,29 +327,15 @@ impl Initiative {
             Err(_) => return Err("Provided path is not valid"),
         };
 
-        let json_chars: Vec<JSONCharacter> = match serde_json::from_str(&f) {
+        let chars: Vec<Character> = match serde_json::from_str(&f) {
             Ok(v) => v,
             Err(_) => {
                 return Err("The provided file is not JSON or is not in the expected format.");
             }
         };
 
-        println!("Enter initiative scores:");
-        json_chars.iter().for_each(|x| {
-            let mut score = prompt(format!("{}: ", x.name).as_str()).parse::<u8>();
-
-            while score.is_err() {
-                score = prompt("Enter a number between 0-255: ").parse::<u8>();
-            }
-
-            self.add(Character {
-                name: x.name.clone(),
-                ac: x.ac,
-                current: x.hp,
-                max: x.hp,
-                score: score.unwrap(),
-                temp: 0,
-            });
+        chars.iter().for_each(|x| {
+            self.add(x.clone());
         });
 
         Ok(())
@@ -335,12 +352,12 @@ impl Initiative {
         unsafe {
             while current.is_some() {
                 let char: &Character = &(*current.unwrap()).data;
-                let json_char = JSONCharacter {
+                /*let json_char = JSONCharacter {
                     name: char.name.clone(),
                     ac: char.ac,
                     hp: char.max,
-                };
-                chars.push(json_char);
+                };*/
+                chars.push(char.clone().into());
                 current = (*current.unwrap()).next;
             }
         }
